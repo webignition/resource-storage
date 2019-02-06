@@ -11,8 +11,10 @@ class SourcePurger
         $filePathPattern = '/^file:/';
 
         foreach ($sources as $source) {
-            if (preg_match($filePathPattern, $source->getMappedUri())) {
-                $path = preg_replace('/^file:/', '', $source->getMappedUri());
+            $mappedUri = $source->getMappedUri();
+
+            if (is_string($mappedUri) && preg_match($filePathPattern, $mappedUri)) {
+                $path = (string) preg_replace('/^file:/', '', $mappedUri);
 
                 @unlink($path);
             }

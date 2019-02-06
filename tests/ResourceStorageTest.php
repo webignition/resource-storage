@@ -70,7 +70,7 @@ class ResourceStorageTest extends \PHPUnit\Framework\TestCase
         $filenameHash = 'file-hash';
         $expectedPath = '/tmp/file-hash.html';
 
-        $localPath = sys_get_temp_dir() . '/' . md5(microtime(true));
+        $localPath = sys_get_temp_dir() . '/' . md5((string) microtime(true));
 
         file_put_contents($localPath, $content);
 

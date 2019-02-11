@@ -16,25 +16,27 @@ class ResourceStorageTest extends \PHPUnit\Framework\TestCase
     /**
      * @dataProvider storeDataProvider
      */
-    public function testStore(string $uri, string $content, string $type, string $filenameHash, string $expectedPath)
-    {
-        if (file_exists($expectedPath)) {
-            unlink($expectedPath);
-        }
-
-        $this->assertFalse(file_exists($expectedPath));
-
+    public function testStore(
+        string $uri,
+        string $content,
+        string $type,
+        string $filenameHash,
+        string $expectedMappedUri
+    ) {
         $this->mockMicrotime(self::MICROTIME);
         $this->mockMd5($content . self::MICROTIME, $filenameHash);
 
         $localSources = new SourceMap();
         $resourceStorage = new ResourceStorage();
 
-        $path = $resourceStorage->store($localSources, $uri, $content, $type);
-        $expectedSource = new Source($uri, 'file:' . $path);
+        $source = $resourceStorage->store($localSources, $uri, $content, $type);
+        $expectedSource = new Source($uri, $expectedMappedUri);
+        $expectedPath = str_replace('file:', '', $expectedMappedUri);
 
-        $this->assertStoredFile($expectedPath, $path, $content);
+        $this->assertInstanceOf(Source::class, $source);
+        $this->assertEquals($expectedSource, $source);
         $this->assertEquals($expectedSource, $localSources[$uri]);
+        $this->assertStoredFile($expectedPath, $content);
 
         $sourcePurger = new SourcePurger();
         $sourcePurger->purgeLocalResources($localSources);
@@ -50,14 +52,14 @@ class ResourceStorageTest extends \PHPUnit\Framework\TestCase
                 'content' => '<!doctype html><html></html>',
                 'type' => 'html',
                 'filenameHash' => 'file-hash-1',
-                'expectedPath' => '/tmp/file-hash-1.html',
+                'expectedMappedUri' => 'file:/tmp/file-hash-1.html',
             ],
             'css file' => [
                 'uri' => 'http://example.com/style.css',
                 'content' => 'html {}',
                 'type' => 'css',
                 'filenameHash' => 'file-hash-2',
-                'expectedPath' => '/tmp/file-hash-2.css',
+                'expectedMappedUri' => 'file:/tmp/file-hash-2.css',
             ],
         ];
     }
@@ -68,7 +70,7 @@ class ResourceStorageTest extends \PHPUnit\Framework\TestCase
         $content = '<!doctype html><html></html>';
         $type = 'html';
         $filenameHash = 'file-hash';
-        $expectedPath = '/tmp/file-hash.html';
+        $expectedMappedUri = 'file:/tmp/file-hash.html';
 
         $localPath = sys_get_temp_dir() . '/' . md5((string) microtime(true));
 
@@ -82,11 +84,14 @@ class ResourceStorageTest extends \PHPUnit\Framework\TestCase
         $localSources = new SourceMap();
         $resourceStorage = new ResourceStorage();
 
-        $path = $resourceStorage->duplicate($localSources, $uri, $localPath, $type);
-        $expectedSource = new Source($uri, 'file:' . $path);
+        $source = $resourceStorage->duplicate($localSources, $uri, $localPath, $type);
+        $expectedSource = new Source($uri, $expectedMappedUri);
+        $expectedPath = str_replace('file:', '', $expectedMappedUri);
 
-        $this->assertStoredFile($expectedPath, $path, $content);
+        $this->assertInstanceOf(Source::class, $source);
+        $this->assertEquals($expectedSource, $source);
         $this->assertEquals($expectedSource, $localSources[$uri]);
+        $this->assertStoredFile($expectedPath, $content);
 
         $sourcePurger = new SourcePurger();
         $sourcePurger->purgeLocalResources($localSources);
@@ -95,10 +100,9 @@ class ResourceStorageTest extends \PHPUnit\Framework\TestCase
         @unlink($localPath);
     }
 
-    private function assertStoredFile(string $expectedPath, string $path, string $expectedContent)
+    private function assertStoredFile(string $path, string $expectedContent)
     {
-        $this->assertSame($expectedPath, $path);
-        $this->assertTrue(file_exists($expectedPath));
+        $this->assertTrue(file_exists($path));
         $this->assertEquals($expectedContent, file_get_contents($path));
     }
 

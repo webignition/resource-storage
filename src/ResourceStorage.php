@@ -7,14 +7,14 @@ use webignition\UrlSourceMap\SourceMap;
 
 class ResourceStorage
 {
-    public function store(SourceMap $localSources, string $uri, string $content, string $type): string
+    public function store(SourceMap $localSources, string $uri, string $content, string $type): Source
     {
         return $this->persist($localSources, $uri, $content, $type, function (string $path, string $content) {
             file_put_contents($path, $content);
         });
     }
 
-    public function duplicate(SourceMap $localSources, string $uri, string $localUri, string $type): string
+    public function duplicate(SourceMap $localSources, string $uri, string $localUri, string $type): Source
     {
         return $this->persist($localSources, $uri, $localUri, $type, function (string $path, string $localPath) {
             copy($localPath, $path);
@@ -27,7 +27,7 @@ class ResourceStorage
         string $hashInput,
         string $type,
         callable $persister
-    ): string {
+    ): Source {
         $path = $this->createPath($hashInput, $type);
         $localUri = 'file:' . $path;
         $source = new Source($uri, $localUri);
@@ -36,7 +36,7 @@ class ResourceStorage
 
         $localSources[$uri] = $source;
 
-        return $path;
+        return $source;
     }
 
     private function createPath(string $hashInput, string $type): string
